@@ -1,4 +1,4 @@
-# 🚀 CI/CD com FastAPI + Docker Hub + GitHub Actions + Argo CD (Rancher Desktop)
+# 🚀 CI/CD com API + Docker + GitHub Actions + Argo CD
 
 > **Objetivo:**  
 > Automatizar **build**, **push** e **deploy** de uma API FastAPI em **Kubernetes local (Rancher Desktop)** usando **Docker Hub** como registry, **GitHub Actions** para CI/CD e **Argo CD** para entrega contínua (GitOps).
