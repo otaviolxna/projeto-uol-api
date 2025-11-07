@@ -213,7 +213,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret ` -o jsonpath="{.data.p
 
 **Via Port-Forward:**
 ```bash
-kubectl port-forward -n default svc/hello-app 8081:8080
+kubectl port-forward -n default svc/hello-app 8080:8080
 # Acesse em http://localhost:8081
 ```
 
