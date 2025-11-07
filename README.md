@@ -1,10 +1,28 @@
 # 🚀 CI/CD com FastAPI + Docker Hub + GitHub Actions + Argo CD (Rancher Desktop)
 
-![CI/CD](https://github.com/otaviolxna/projeto-uol-api/actions/workflows/ci-cd.yml/badge.svg)
-![Docker Hub](https://img.shields.io/docker/pulls/otaviolxna/hello-app?logo=docker)
-
 > **Objetivo:**  
 > Automatizar **build**, **push** e **deploy** de uma API FastAPI em **Kubernetes local (Rancher Desktop)** usando **Docker Hub** como registry, **GitHub Actions** para CI/CD e **Argo CD** para entrega contínua (GitOps).
+
+## ⚙️ Tecnologias
+
+<div align="center">
+
+  <!-- Linguagem & Framework -->
+  <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white&style=for-the-badge" />
+  
+  <!-- Container & Registry -->
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white&style=for-the-badge" />
+  <img alt="Docker Hub" src="https://img.shields.io/badge/Docker%20Hub-2496ED?logo=docker&logoColor=white&style=for-the-badge" />
+
+  <!-- CI/CD -->
+  <img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub%20Actions-2088FF?logo=githubactions&logoColor=white&style=for-the-badge" />
+
+  <!-- Orquestração & GitOps -->
+  <img alt="Kubernetes" src="https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white&style=for-the-badge" />
+  <img alt="Argo CD" src="https://img.shields.io/badge/Argo%20CD-FB6A00?logo=argo&logoColor=white&style=for-the-badge" />
+  <img alt="Rancher Desktop" src="https://img.shields.io/badge/Rancher%20Desktop-0075A8?logo=rancher&logoColor=white&style=for-the-badge" />
+
+</div>
 
 ---
 
