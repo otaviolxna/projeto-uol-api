@@ -51,7 +51,9 @@
 
 ---
 
-## 🧩 1. Código da API
+## 🧩 1. Repósitorio API e Workflows
+
+1. Crie um repositório público e adicione os seguintes arquivos:
 
 **`main.py`**
 ```python
@@ -61,7 +63,7 @@ app = FastAPI()
 
 @app.get("/")
 def root():
-    return {"message": "Hello, Otávio! 🚀"}
+    return {"message": "Hello World!"}
 ```
 
 **`requirements.txt`**
@@ -89,8 +91,9 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
 
 ---
 
-## ⚙️ 2. Manifests do Kubernetes
+## ⚙️ 2. Repositório Manifests do Kubernetes
 
+1. Crie um novo repositório público com esses arquivos:
 **`deployment.yaml`**
 ```yaml
 apiVersion: apps/v1
@@ -238,3 +241,16 @@ Com esse projeto, você aprendeu a:
 - Entregar uma API **FastAPI** totalmente automatizada 🎯
 
 ---
+
+## ✨ Sobre mim
+
+Olá! 👋 Sou **Otávio Lana**, estudante de **Segurança da Informação** e entusiasta de **DevSecOps** e **Cloud Security**.  
+Atualmente sou estagiário na **UOL Compass**, com foco em **AWS, automação e práticas de FinOps**.  
+Meu objetivo é crescer na área de segurança em nuvem e levar meus projetos para o nível internacional 🌎.
+
+Gosto de transformar aprendizado em prática — seja construindo pipelines, automatizando deploys ou criando conteúdos sobre cibersegurança e tecnologia.  
+Se você curtiu este projeto, sinta-se à vontade para **⭐ dar uma estrela** e contribuir! 😄
+
+💼 [LinkedIn](https://www.linkedin.com/in/otaviolxna) 
+
+</div>
