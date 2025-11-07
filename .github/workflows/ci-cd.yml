@@ -3,8 +3,6 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
   build-and-push:
@@ -14,6 +12,8 @@ jobs:
       IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/hello-app
       MANIFESTS_REPO_SSH: git@github.com:otaviolxna/projeto-kubernetes-deployments.git
       MANIFESTS_BRANCH: main
+      # se seus YAMLs estiverem em subpasta (ex.: k8s), mude para "k8s"
+      MANIFESTS_PATH: .
 
     steps:
       - name: Checkout app repo (projeto-uol-api)
@@ -42,7 +42,7 @@ jobs:
             ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.TAG }}
 
       # --- SSH para acessar o repo de manifests ---
-      - name: Configure SSH
+      - name: Configure SSH for git
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
@@ -51,10 +51,31 @@ jobs:
 
       - name: Clone manifests repo (projeto-kubernetes-deployments)
         run: |
+          set -euxo pipefail
           git clone --depth 1 -b "${{ env.MANIFESTS_BRANCH }}" "${{ env.MANIFESTS_REPO_SSH }}" manifests
           cd manifests
           git config user.name "github-actions"
           git config user.email "ci@github.com"
 
-          # Atualiza a imagem no(s) deployment(s).
-          # Se seus YAMLs NÃO estão na raiz, troque o caminho abaixo (ex.: k8s/deplo
+          # entra na pasta onde estão os YAMLs
+          cd "${{ env.MANIFESTS_PATH }}"
+
+          # Atualiza a imagem no deployment.yaml (ajuste o nome do arquivo se precisar)
+          if [ -f deployment.yaml ]; then
+            sed -i -E "s|image: .*hello-app.*|image: ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.TAG }}|" deployment.yaml
+          else
+            # fallback: tenta achar qualquer deployment*.yaml contendo 'hello-app'
+            files=$(grep -ril --include="*deployment*.yaml" -e 'hello-app' . || true)
+            for f in $files; do
+              sed -i -E "s|image: .*hello-app.*|image: ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.TAG }}|" "$f"
+            done
+          fi
+
+          # Só commita se houve alteração
+          if git status --porcelain | grep .; then
+            git add -A
+            git commit -m "chore(ci): bump image to ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.TAG }}"
+            git push origin "${{ env.MANIFESTS_BRANCH }}"
+          else
+            echo "Nenhuma mudança nos manifests (imagem já estava nessa tag)."
+          fi
