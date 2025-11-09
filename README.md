@@ -53,7 +53,11 @@
 
 ## 🧩 1. Repósitorio API e Workflows
 
-1. Crie um repositório público e adicione os seguintes arquivos:
+1. Crie um repositório público
+
+![Criação do primeiro repositório](images/repositorio1.png)
+
+2. Adicione os seguintes arquivos:
 
 **`main.py`**
 ```python
@@ -66,34 +70,31 @@ def root():
     return {"message": "Hello World!"}
 ```
 
-**`requirements.txt`**
-```
-fastapi
-uvicorn
-```
+![Criar arquivo da API](images/api.png)
 
 **`Dockerfile`**
 ```dockerfile
 FROM python:3.10-slim
+
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
+COPY . /app
+
+RUN pip install fastapi uvicorn
+
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
 ```
 
-> Teste local:
-> ```bash
-> docker build -t hello-app .
-> docker run -p 8082:8080 hello-app
-> # → http://localhost:8082
-> ```
+![Criar arquivo Dockerfile](images/dockerfile.png)
 
 ---
 
 ## ⚙️ 2. Repositório Manifests do Kubernetes
 
-1. Crie um novo repositório público com esses arquivos:
+1. Crie um novo repositório público para os manifests do Kubernetes:
+
+![Criação do segundo repositório](images/repositorio2.png)
+
+2. 
 **`deployment.yaml`**
 ```yaml
 apiVersion: apps/v1
@@ -134,6 +135,8 @@ spec:
             periodSeconds: 10
 ```
 
+![Criação do arquivo deployment](images/deployment.png)
+
 **`service.yaml`**
 ```yaml
 apiVersion: v1
@@ -144,33 +147,86 @@ spec:
   selector:
     app: hello-app
   ports:
-    - port: 8080
+    - protocol: TCP
+      port: 8080
       targetPort: 8080
-      protocol: TCP
   type: ClusterIP
 ```
+
+![Criação do arquivo service](images/service.png)
 
 ---
 
 ## 🐋 3. Publicar no Docker Hub
 
-Crie um repositório público no Docker Hub:  
+Crie um repositório público no Docker Hub: 
+
+Exemplo:
 ➡️ `otaviolxna/hello-app`
 
 As tags geradas:
 - `latest`
 - `<sha-curto>` (ex: `a12bc34d5f6`)
 
+![Criação do repositório no Docker Hub](images/dockerhub.png)
+
 ---
 
 ## ⚙️ 4. GitHub Actions (CI/CD)
 
-### 🔐 Secrets necessários (no `projeto-uol-api`)
+## 🔐 4. Configurando os Secrets do GitHub Actions
+
+Para que o pipeline consiga:
+- Fazer **login no Docker Hub** (para publicar as imagens);
+- Ter permissão de **editar o repositório de manifests** (para atualizar o `deployment.yaml`);
+- E autenticar com segurança, **sem expor senhas no código**;
+
+...é necessário configurar **3 secrets** no repositório da **api`**.
+
+---
+
+### 🧭 Passo a passo
+
+1. **Acesse o repositório da API no GitHub**  
+
+2. Vá até:  
+   **Settings → Secrets and variables → Actions → New repository secret**
+
+4. Agora você criará **três secrets** (um de cada vez):
+
+---
+
+### 🧩 Secret 1 — `DOCKER_USERNAME`
+
+- **Valor:** seu nome de usuário do Docker Hub  
+  Exemplo:
+  otaviolxna
 ```
-DOCKER_USERNAME = otaviolxna
-DOCKER_PASSWORD = <token do Docker Hub>
-GH_PAT          = <Personal Access Token com repo:contents write>
-```
+
+- **Função:** permite que o GitHub Actions saiba **qual conta Docker** usar para enviar imagens (`docker push`).
+
+---
+
+### 🧩 Secret 2 — `DOCKER_PASSWORD`
+
+- **Valor:** um **Access Token** do Docker Hub (não a senha da conta).  
+Para gerar:
+1. Acesse [hub.docker.com](https://hub.docker.com)
+2. Vá em **Account Settings → Security → New Access Token**
+3. Dê um nome (ex: `projeto uol`)
+
+![Criação do Token](images/token.png)
+
+4. Copie o token gerado
+5. Cole no campo de valor do secret no GitHub
+
+⚠️ **Importante:** esse token é exibido apenas uma vez — se perder, gere outro.
+
+---
+
+### 🧩 Secret 3 — ``
+
+
 
 ---
 
