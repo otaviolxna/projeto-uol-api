@@ -35,10 +35,11 @@
   kubectl get nodes
   ```
 - ☁️ **Conta no GitHub**
-  - Repositórios: `projeto-uol-api` e `projeto-kubernetes-deployments`
+  - Repositórios: `repositorio da api` e `repositorio dos manifests`
 - 🐋 **Conta no Docker Hub**
-  - Repositório público: `otaviolxna/hello-app`
+  - Repositório público: `seunome/hello-app`
 - 🔧 **Argo CD** instalado no cluster
+- 📂 **Rancher Desktop** para utilização dos Kubernetes 
 
 ---
 
@@ -85,6 +86,97 @@ CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
 ```
 
 ![Criar arquivo Dockerfile](images/dockerfile.png)
+
+No repositório da **`api`**, crie o caminho:
+
+.github/workflows/ci-cd.yml
+
+**`ci-cd.yml`**
+```yaml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/hello-app
+      MANIFESTS_REPO_SSH: git@github.com:otaviolxna/projeto-kubernetes-deployments.git
+      MANIFESTS_BRANCH: main
+      # se seus YAMLs estiverem em subpasta (ex.: k8s), mude para "k8s"
+      MANIFESTS_PATH: .
+
+    steps:
+      - name: Checkout app repo (projeto-uol-api)
+        uses: actions/checkout@v4
+
+      - name: Set image tag (short SHA)
+        id: vars
+        run: echo "TAG=$(echo $GITHUB_SHA | cut -c1-12)" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build & Push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.TAG }}
+
+      # --- SSH para acessar o repo de manifests ---
+      - name: Configure SSH for git
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Clone manifests repo (projeto-kubernetes-deployments)
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 -b "${{ env.MANIFESTS_BRANCH }}" "${{ env.MANIFESTS_REPO_SSH }}" manifests
+          cd manifests
+          git config user.name "github-actions"
+          git config user.email "ci@github.com"
+
+          # entra na pasta onde estão os YAMLs
+          cd "${{ env.MANIFESTS_PATH }}"
+
+          # Atualiza a imagem no deployment.yaml (ajuste o nome do arquivo se precisar)
+          if [ -f deployment.yaml ]; then
+            sed -i -E "s|image: .*hello-app.*|image: ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.TAG }}|" deployment.yaml
+          else
+            # fallback: tenta achar qualquer deployment*.yaml contendo 'hello-app'
+            files=$(grep -ril --include="*deployment*.yaml" -e 'hello-app' . || true)
+            for f in $files; do
+              sed -i -E "s|image: .*hello-app.*|image: ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.TAG }}|" "$f"
+            done
+          fi
+
+          # Só commita se houve alteração
+          if git status --porcelain | grep .; then
+            git add -A
+            git commit -m "chore(ci): bump image to ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.TAG }}"
+            git push origin "${{ env.MANIFESTS_BRANCH }}"
+          else
+            echo "Nenhuma mudança nos manifests (imagem já estava nessa tag)."
+          fi
+```
+
+![Criar arquivo Workflow](images/workflow.png)
 
 ---
 
@@ -198,6 +290,7 @@ Para que o pipeline consiga:
 
 ### 🧩 Secret 1 — `DOCKER_USERNAME`
 
+```
 - **Valor:** seu nome de usuário do Docker Hub  
   Exemplo:
   otaviolxna
@@ -208,25 +301,77 @@ Para que o pipeline consiga:
 ---
 
 ### 🧩 Secret 2 — `DOCKER_PASSWORD`
-
+```
 - **Valor:** um **Access Token** do Docker Hub (não a senha da conta).  
 Para gerar:
 1. Acesse [hub.docker.com](https://hub.docker.com)
 2. Vá em **Account Settings → Security → New Access Token**
 3. Dê um nome (ex: `projeto uol`)
+```
 
 ![Criação do Token](images/token.png)
 
+```
 4. Copie o token gerado
 5. Cole no campo de valor do secret no GitHub
+```
 
 ⚠️ **Importante:** esse token é exibido apenas uma vez — se perder, gere outro.
 
 ---
 
-### 🧩 Secret 3 — ``
+### 🧩 Secret 3 — `SSH_PRIVATE_KEY`
 
+#### 1) Gerar um par de chaves SSH (ed25519)
 
+```bash
+ssh-keygen -t ed25519 -C "ci@github-actions" -f ./id_ed25519
+```
+
+![Criação das Chaves SSH](images/chaves.png)
+
+Isso vai gerar:
+
+Chave privada: id_ed25519
+
+Chave pública: id_ed25519.pub
+
+⚠️ Nunca faça commit da chave privada em repositórios.
+
+---
+
+### 2) Adicionar a chave pública como Deploy Key (com write)
+
+No GitHub, abra o repositório dos manifests do Kubernetes →
+Settings → Deploy keys → Add deploy key
+
+Title: GitHub Actions
+
+Key: (cole o conteúdo completo de id_ed25519.pub)
+
+✅ Allow write access (marque essa opção)
+
+Add key
+
+![Deploy Key](images/deploykey.png)
+
+---
+
+1. Agora adicione a chave privada como secret do repositório da API
+2. 
+**Valor:** SSH_PRIVATE_KEY
+
+Conteúdo:
+
+```
+Conteúdo da chave privada
+```
+
+---
+
+Ao realizar todos os passos, sua aba Actions Secrets ficará assim:
+
+![Actions Secrets](images/secrets.png)
 
 ---
 
@@ -238,34 +383,51 @@ kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/st
 kubectl get pods -n argocd
 ```
 
+![ArgoCD](images/argo.png)
+
 ### Acessar o painel
 ```bash
 kubectl port-forward -n argocd svc/argocd-server 9090:443
 ```
+
+![Iniciar ArgoCD](images/interface.png)
+
 Acesse em: [http://localhost:9090](http://localhost:9090)
 
 Login: Admin
+
+![Login](images/login.png)
 
 Senha: (Rodar no PowerShell)
 ```powershell
 kubectl -n argocd get secret argocd-initial-admin-secret ` -o jsonpath="{.data.password}" | %{ [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_)) }
 ```
 
+![Senha](images/senha.png)
+
 ---
 
 ## 🌐 6. Criar o App no Argo CD
 
-- **Application Name:** `hello-app`
+- **Application Name:** `GitHub Actions`
 - **Project:** `default`
-- **Repository URL:** `https://github.com/otaviolxna/projeto-kubernetes-deployments`
-- **Revision:** `main`
-- **Path:** `/`
-- **Cluster:** `in-cluster`
-- **Namespace:** `default`
 - **Sync Policy:** ✅ Enable Auto-Sync
 
+![Criação do APP](images/app1.png)
+
+- **Repository URL:** `https://github.com/otaviolxna/projeto-kubernetes-deployments`
+- **Revision:** `main`
+- **Path:** `.`
+
+![Criação do APP](images/app2.png)
+
+- **Cluster:** `in-cluster`
+- **Namespace:** `default`
+
+![Criação do APP](images/app3.png)
+
 > 💡 Em ambiente local, o auto-sync depende de polling.
-> 
+
 ---
 
 ## 🌍 7. Acesso à aplicação
@@ -273,8 +435,10 @@ kubectl -n argocd get secret argocd-initial-admin-secret ` -o jsonpath="{.data.p
 **Via Port-Forward:**
 ```bash
 kubectl port-forward -n default svc/hello-app 8080:8080
-# Acesse em http://localhost:8081
+# Acesse em http://localhost:8080
 ```
+
+![API no Ar](images/site.png)
 
 ---
 
@@ -285,6 +449,8 @@ kubectl port-forward -n default svc/hello-app 8080:8080
 3. Faz commit no `projeto-kubernetes-deployments`  
 4. Argo CD detecta → sincroniza → cria novo pod  
 5. Atualização visível na URL da API 🎉
+
+![Resultado](images/resultado.png)
 
 ---
 
